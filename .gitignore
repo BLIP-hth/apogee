@@ -1,0 +1,17 @@
+node_modules/
+dist/
+dist-ssr/
+.vercel/
+.wrangler/
+.env
+.env*
+*.zip
+*.log
+*.local
+.DS_Store
+Thumbs.db
+Desktop.ini
+_backup/
+.vscode/*
+!.vscode/extensions.json
+.idea/
