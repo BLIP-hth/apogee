@@ -1602,7 +1602,11 @@
       chip.innerHTML =
         '<div class="cn">' + r.name + "</div>" +
         '<div class="cm">' + (on ? r.org : "Coming soon") + "</div>";
-      if (on) chip.addEventListener("click", () => showRocket(r));
+      if (on) chip.addEventListener("click", () => {
+        if (activeRocket && activeRocket.key === r.key) return;   // already viewing it
+        if (activeRocket) _rocketBack.push(activeRocket.key);     // Back returns to it
+        showRocket(r);
+      });
       else { chip.style.opacity = "0.4"; chip.style.cursor = "default"; }
       dock.appendChild(chip);
     });
@@ -1715,6 +1719,7 @@
       const ta = el("takeApart"), taLabel = explodeAmount > 0.5 ? "⟲ Rebuild it" : "⟳ Take it apart";
       if (ta && ta.textContent !== taLabel) ta.textContent = taLabel;
     }
+    histSync();
     updateHover();
     render();
   }
@@ -4318,6 +4323,48 @@
     setTimeout(() => document.addEventListener("pointerdown", welcomeOutsideTap, true), 60);
   }
   el("welcomeGo").addEventListener("click", () => { sfx("click"); closeWelcome(); });
+
+  /* ============================================================
+     BROWSER BACK unwinds app state instead of leaving the site.
+     Each Back press exits the single deepest active level
+     (launch > tour > x-ray > focused part > flat view > previous
+     rocket); from the plain explorer, Back leaves the site. One
+     history "trap" entry is kept armed while non-root and re-armed
+     after each step, so Back always has one level to pop.
+     ============================================================ */
+  let _histTrap = false;
+  let _rocketBack = [];                 // keys of rockets to walk Back through
+  function atRoot() {
+    return launchPhase === "idle" && !launchReady && !clTimer
+        && !TOUR && !xray && !focused
+        && explodeAmount <= 0.5 && _rocketBack.length === 0;
+  }
+  function histArm() {
+    if (_histTrap) return;
+    try { history.pushState({ apg: 1 }, ""); _histTrap = true; } catch (e) {}
+  }
+  function histSync() {                 // called every frame: arm a trap while non-root
+    if (!atRoot()) histArm();
+  }
+  function exitOneLevel() {
+    if (launchPhase !== "idle") { resetLaunch(); return true; }
+    if (launchReady || clTimer) { standDown(); return true; }   // cancel a GO/NO-GO poll
+    if (TOUR)                   { exitTour(true); return true; }
+    if (xray)                   { setXray(false); return true; }
+    if (focused)                { focused = null; camTween = null; camMode = "auto"; return true; }
+    if (explodeAmount > 0.5)    { reassembleView(); return true; }
+    if (_rocketBack.length) {
+      const r = ROCKETS.find(x => x.key === _rocketBack.pop());
+      if (r) showRocket(r);
+      return true;
+    }
+    return false;
+  }
+  window.addEventListener("popstate", () => {
+    _histTrap = false;                  // the trap entry was just consumed
+    const exited = exitOneLevel();
+    if (exited && !atRoot()) histArm(); // re-arm immediately for the next level
+  });
 
   // go
   buildDock();
