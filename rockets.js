@@ -243,6 +243,90 @@ const ROCKETS = [
 
   /* ---------------------------------------------------------- */
   {
+    key: "falcon-heavy",
+    name: "Falcon Heavy",
+    org: "SpaceX", flag: "🇺🇸", years: "2018 to present", status: "Active",
+    height: 70, diameter: 12.2, mass: "1,420 t", thrust: "22.8 MN",
+    payloadLEO: "63.8 t", accent: 0x8fd0ff,
+    sub: "Three Falcon 9 cores bolted together, for the heaviest payloads SpaceX flies.",
+    claim: "Twenty seven engines fire at once, nine on each of its three cores.",
+    sizeVs: "The same 70 metres tall as a Falcon 9, but three times as wide at the base.",
+    engines: "27 x Merlin 1D", flights: "10+ launches",
+    facts: [
+      "It is really three Falcon 9 first stages bolted side by side, firing 27 engines at once.",
+      "The two side boosters peel away and fly home together, often landing within seconds of each other.",
+      "Flown expendably it can lift about 64 tonnes to low orbit, more than any rocket flying except NASA's SLS.",
+      "The centre core throttles down just after liftoff, then powers back up once the side boosters drop away, saving fuel for the harder job of carrying on alone."
+    ],
+    missions: [
+      ["Heavy payloads", "Launches the largest satellites and deep space probes SpaceX flies."],
+      ["Psyche probe", "Sent a NASA spacecraft on its way to a metal asteroid in 2023."],
+      ["Dual landings", "Its two side boosters famously return and touch down together at the Cape."]
+    ],
+    build: [
+      "Falcon Heavy started as a simple idea: take three Falcon 9 first stages and bolt them together. In practice the centre core had to be heavily reinforced to carry the extra push fed in from the two boosters either side.",
+      "All three cores light on the pad, 27 engines in total. The centre one throttles back to save fuel while the side boosters do the early heavy lifting, then powers up again once they fall away.",
+      "The two side boosters are ordinary Falcon 9 first stages capped with a nose cone instead of an upper stage. Like any Falcon 9 booster they fly back and land to be reused, often returning as a synchronised pair."
+    ],
+    parts: [
+      // ---- Centre core (stage "s1") ----
+      { id:"s1", stage:"s1", label:"Centre Core", kind:"stage", rb:1.83, rt:1.83, h:42, color:WHITE,
+        purpose:"The reinforced middle booster. All nine of its engines light on the pad, then throttle down to save fuel while the side boosters do the early work. Once they drop away it powers back up and carries on alone before separating and flying home." },
+      { id:"n1", stage:"s1", label:"Centre Merlins (x9)", kind:"nozzles", count:9, r:0.42, h:1.6, spread:1.1, color:DARK,
+        purpose:"Nine Merlin engines on the centre core, eight around one. With nine more on each side booster, 27 engines fire together at liftoff." },
+      { id:"leg", stage:"s1", label:"Landing Legs (x4)", kind:"fins", leg:true, count:4, w:1.0, h:8, t:0.42, color:0x14161c, yBias:0.0,
+        purpose:"Four carbon fibre legs folded flat against the centre core. Just before touchdown they swing out so the core can land upright on a pad or a drone ship far out at sea." },
+      { id:"is", stage:"s1", label:"Interstage", kind:"stage", rb:1.83, rt:1.83, h:3, color:BLACK,
+        purpose:"The dark collar joining the centre core to the second stage above. It holds the grid fins that steer the core home." },
+      { id:"gf", stage:"s1", label:"Grid Fins (x4)", kind:"fins", grid:true, count:4, w:1.5, h:1.6, t:0.16, color:0x585d68, metal:0.65, rough:0.45, yBias:0.58,
+        purpose:"Waffle shaped titanium fins that flip out during the fall back to Earth, biting the air to steer the centre core precisely toward its landing spot." },
+      { id:"oct", stage:"s1", label:"Octaweb", kind:"thrust", y:1.4, color:0x1c1e24, metal:0.5, rough:0.6,
+        purpose:"The black frame at the base that holds the centre core's nine engines and spreads their push, plus the extra load fed in from the two side boosters, into the bottom of the tank." },
+      { id:"s1-rp1", stage:"s1", label:"Kerosene Tank (Core)", kind:"internal", shape:"cyl", r:1.6, h:14, yFrac:0.25, caps:"bot", color:0xd6883a, metal:0.3, rough:0.4,
+        purpose:"The lower tank of the centre core holds RP-1 kerosene, a dense, refined fuel much like jet fuel." },
+      { id:"s1-lox", stage:"s1", label:"Oxygen Tank (Core)", kind:"internal", shape:"cyl", r:1.6, h:22, yFrac:0.69, caps:"top", color:0x3f92d2, metal:0.3, rough:0.4,
+        purpose:"The larger upper tank holds liquid oxygen. A rocket needs far more oxygen than fuel by volume, so this is the bigger of the two tanks." },
+      { id:"s1-dome", stage:"s1", label:"Common Dome", kind:"internal", shape:"disc", r:1.6, yFrac:0.45, color:0xc4ccd8, metal:0.8, rough:0.3,
+        purpose:"The single shared wall between the kerosene and oxygen tanks, saving the weight and length of two separate end caps." },
+      { id:"s1-tube", stage:"s1", label:"LOX Transfer Tube", kind:"internal", shape:"feedline", r:0.24, y0:0.05, y1:0.45, off:0, color:0x3f92d2, metal:0.4, rough:0.4,
+        purpose:"A pipe down the centre of the kerosene tank, carrying cold oxygen from the upper tank to the engines so the two propellants never meet until the chamber." },
+      { id:"s1-he", stage:"s1", label:"Helium Bottles (COPVs)", kind:"internal", shape:"sphere", r:0.5, yFrac:0.74, color:0xd9c15e, metal:0.7, rough:0.4,
+        purpose:"Carbon wrapped bottles of high pressure helium sunk in the cold oxygen tank. They keep the tanks firm and pushing fuel as the propellant drains." },
+      { id:"brand", stage:"s1", kind:"brand", text:"SpaceX", label:"SpaceX Livery",
+        purpose:"The SpaceX name and a small United States flag up the side of the centre core." },
+      // ---- Second stage (stage "s2") ----
+      { id:"s2", stage:"s2", label:"Second Stage", kind:"stage", rb:1.83, rt:1.83, h:12, color:WHITE,
+        purpose:"A single vacuum engine that lights after the centre core drops away, carrying the payload the rest of the way to orbit and often far beyond." },
+      { id:"s2-rp1", stage:"s2", label:"Kerosene Tank (S2)", kind:"internal", shape:"cyl", r:1.6, h:5, yFrac:0.30, caps:"both", color:0xd6883a, metal:0.3, rough:0.4,
+        purpose:"A smaller kerosene tank for the upper stage, enough for the final push once the heavy lifting is done." },
+      { id:"s2-lox", stage:"s2", label:"Oxygen Tank (S2)", kind:"internal", shape:"cyl", r:1.6, h:4, yFrac:0.70, caps:"both", color:0x3f92d2, metal:0.3, rough:0.4,
+        purpose:"The upper stage's liquid oxygen, feeding its single vacuum engine on the long climb to orbit." },
+      { id:"s2-he", stage:"s2", label:"Helium Bottles (S2)", kind:"internal", shape:"sphere", r:0.4, yFrac:0.7, color:0xd9c15e, metal:0.7, rough:0.4,
+        purpose:"The upper stage's own helium bottles, keeping its tanks pressurised through the long coast and burn in space." },
+      { id:"s2-mv", stage:"s2", label:"Merlin Vacuum Engine", kind:"internal", shape:"nozzles", count:1, r:0.9, h:3.6, spread:0, color:0x7a5636, metal:0.7, rough:0.45,
+        purpose:"A single engine with a huge niobium bell shaped for vacuum. The big bell lets the exhaust spread fully where there is no air pushing back, squeezing out extra thrust." },
+      // ---- Payload fairing (stage "fb") ----
+      { id:"fsh", stage:"fb", label:"Fairing Shoulder", kind:"cone", rb:1.83, rt:2.6, h:1.3, color:0xf4f6fa,
+        purpose:"The short flare where the slim body opens out to the wider fairing, giving big payloads room inside." },
+      { id:"fb", stage:"fb", label:"Payload Fairing", kind:"stage", rb:2.6, rt:2.6, h:7.6, color:0xf4f6fa,
+        purpose:"A protective clamshell about 5.2 metres across, shielding the cargo during the climb before splitting in two and dropping away above the atmosphere." },
+      { id:"fn", stage:"fb", label:"Fairing Nose", kind:"ogive", rb:2.6, rt:0, h:4.5, color:0xf4f6fa,
+        purpose:"The rounded ogive tip of the fairing, curved to cut cleanly through the dense air near the ground." },
+      { id:"fb-sat", stage:"fb", label:"Payload (Satellite)", kind:"internal", shape:"sat", r:0.95, h:2.6, yFrac:0.5, wingLen:3.2, wingH:1.7, color:0xd9c15e, wing:0x27407e, metal:0.6, rough:0.4,
+        purpose:"The heavy cargo riding inside the nose, here a large communications satellite. Falcon Heavy's extra muscle can throw payloads like this to high orbits or onto escape paths toward other worlds." },
+      // ---- Side boosters (stage "boost") ----
+      { id:"boost", stage:"boost", label:"Side Boosters (x2)", kind:"boosters", count:2, r:1.83, h:42, taper:1.83, cone:5, angle:-36, color:0xf2f4f8, metal:0.1, rough:0.5,
+        purpose:"Two ordinary Falcon 9 first stages strapped either side of the centre core, each capped with a nose cone instead of an upper stage. All nine of their engines light on the pad. Once empty they peel away and fly home, often landing together as a synchronised pair. Click to open one up.",
+        tanks:[
+          { id:"lox", y0:0.52, y1:0.96, color:0x3f92d2, metal:0.3, rough:0.4, label:"Oxygen Tank (Booster)", purpose:"The larger upper tank of each side booster holds liquid oxygen, feeding its nine engines along with the kerosene below." },
+          { id:"rp1", y0:0.05, y1:0.5, color:0xd6883a, metal:0.3, rough:0.4, label:"Kerosene Tank (Booster)", purpose:"The lower tank holds RP-1 kerosene. Each side booster is a complete Falcon 9 first stage, with its own fuel, oxygen and engines." }
+        ],
+        engine:{ count:9, r:0.42, h:1.5, spread:1.05, label:"Booster Merlins (x9 each)", purpose:"Nine Merlin engines on each side booster, 18 between the two. With the centre core's nine, that is 27 engines firing together at liftoff." } }
+    ]
+  },
+
+  /* ---------------------------------------------------------- */
+  {
     key: "starship",
     name: "Starship",
     org: "SpaceX", flag: "🇺🇸", years: "2023 to present", status: "In testing",

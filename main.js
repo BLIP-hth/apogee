@@ -12,7 +12,7 @@
 (function () {
   "use strict";
 
-  const ACTIVE_KEYS = ["saturn-v", "starship", "falcon-9", "shuttle", "sls", "soyuz"];          // <- add more keys here to turn rockets on
+  const ACTIVE_KEYS = ["saturn-v", "starship", "falcon-9", "falcon-heavy", "shuttle", "sls", "soyuz"];          // <- add more keys here to turn rockets on
   const ROCKETS = window.ROCKETS;
   const el = (id) => document.getElementById(id);
 
