@@ -477,6 +477,17 @@
 
     // place a ring of engines (with an optional centre one), reused by F-1 and J-2
     function placeEngines(p, mtl, yTop, hidden) {
+      if (p.rings) {                          // explicit concentric rings (e.g. Super Heavy's 33)
+        for (const rg of p.rings) {
+          if (rg.n === 1) { addEngine(p, mtl, 0, 0, yTop, hidden); continue; }
+          const off = rg.phase || 0;
+          for (let i = 0; i < rg.n; i++) {
+            const a = (i / rg.n) * Math.PI * 2 + off;
+            addEngine(p, mtl, Math.cos(a) * rg.s, Math.sin(a) * rg.s, yTop, hidden);
+          }
+        }
+        return;
+      }
       const centerCount = (p.count % 2 === 1 && p.count >= 5) ? 1 : 0;
       const ring = p.count - centerCount;
       if (centerCount) addEngine(p, mtl, 0, 0, yTop, hidden);
