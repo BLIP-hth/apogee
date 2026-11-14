@@ -1213,6 +1213,7 @@
     controls.update();
 
     renderPanel(rocket);
+    renderOutline(rocket);
     setActiveChip(rocket.key);
     document.documentElement.style.setProperty("--accent", "#" + rocket.accent.toString(16).padStart(6, "0"));
 
@@ -1720,6 +1721,9 @@
       if (ta && ta.textContent !== taLabel) ta.textContent = taLabel;
     }
     histSync();
+    syncOutline();
+    if (TOUR) updateScrub();
+    if (launchPhase !== "idle") tickScope();
     updateHover();
     render();
   }
@@ -1873,7 +1877,13 @@
   let TOUR = null;
   const TOUR_DWELL = 7000;             // ms on each part before auto-advancing
   function tourHold() { if (TOUR && TOUR.timer) { clearTimeout(TOUR.timer); TOUR.timer = null; } }
-  function tourArm() { tourHold(); if (TOUR && TOUR.playing) TOUR.timer = setTimeout(() => tourAdvance(1), TOUR_DWELL); }
+  function tourArm() {
+    tourHold();
+    if (TOUR && TOUR.playing) {
+      TOUR.armedAt = performance.now();                 // scrubber syncs its creep to this
+      TOUR.timer = setTimeout(() => tourAdvance(1), TOUR_DWELL);
+    }
+  }
   // restore=true (End tour button, tour finishing) stands the rocket back up; a manual
   // take-over (scroll, tap, Take apart) keeps the blueprint pose the user is now driving
   function exitTour(restore) {
@@ -1923,6 +1933,7 @@
     TOUR = { steps: steps, i: -1, playing: true, timer: null, hl: null };
     el("panel").classList.add("swap");        // the caption card takes the stage
     el("tour").classList.add("show");
+    buildScrub();
     // let the blueprint lay itself out before the first camera move
     el("tourStep").textContent = activeRocket.name;
     el("tourTitle").textContent = "Laying it all out";
@@ -1948,6 +1959,57 @@
     el("tourPlay").textContent = TOUR.playing ? "Pause" : "Play";
     tourArm();
   });
+
+  /* ---- draggable tour scrubber: a timeline over the tour stops ---- */
+  function buildScrub() {
+    const track = el("tourScrubTrack");
+    if (!track || !TOUR) return;
+    track.querySelectorAll(".tour-scrub-dot").forEach(d => d.remove());
+    const N = TOUR.steps.length;
+    for (let k = 0; k < N; k++) {
+      const d = document.createElement("div");
+      d.className = "tour-scrub-dot";
+      d.style.left = (N > 1 ? (k / (N - 1)) * 100 : 0) + "%";
+      track.appendChild(d);
+    }
+  }
+  function updateScrub() {
+    if (!TOUR) return;
+    const N = TOUR.steps.length, i = Math.max(0, TOUR.i);
+    let creep = 0;    // how far into the current stop's dwell we are (syncs to the real timer)
+    if (TOUR.playing && TOUR.armedAt != null && i < N - 1) {
+      creep = Math.min(1, (performance.now() - TOUR.armedAt) / TOUR_DWELL);
+    }
+    const pos = N > 1 ? Math.min(1, (i + creep) / (N - 1)) : 1;
+    el("tourScrubFill").style.width = (pos * 100) + "%";
+    el("tourScrubKnob").style.left = (pos * 100) + "%";
+    el("tourScrubTrack").querySelectorAll(".tour-scrub-dot").forEach((d, k) => {
+      d.classList.toggle("active", k === i);
+      d.classList.toggle("done", k < i);
+    });
+  }
+  (function wireScrub() {
+    const track = el("tourScrubTrack");
+    if (!track) return;
+    let scrubbing = false;
+    const jump = (clientX) => {
+      if (!TOUR) return;
+      const r = track.getBoundingClientRect();
+      const f = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+      const N = TOUR.steps.length, idx = N > 1 ? Math.round(f * (N - 1)) : 0;
+      if (idx !== TOUR.i) { sfx("hover"); tourShow(idx); }
+    };
+    track.addEventListener("pointerdown", e => {
+      if (!TOUR) return;
+      scrubbing = true;
+      if (TOUR.playing) { TOUR.playing = false; el("tourPlay").textContent = "Play"; tourHold(); }  // scrubbing takes over
+      try { track.setPointerCapture(e.pointerId); } catch (x) {}
+      jump(e.clientX);
+    });
+    track.addEventListener("pointermove", e => { if (scrubbing) jump(e.clientX); });
+    track.addEventListener("pointerup", () => { scrubbing = false; });
+    track.addEventListener("pointercancel", () => { scrubbing = false; });
+  })();
 
   // dragging = the user is taking manual control of the camera angle
   controls.addEventListener("start", () => { if (!camTween) camMode = "user"; });
@@ -2756,7 +2818,7 @@
   const L = { t: 0, cd: 0, alt: 0, vy: 0, vx: 0, pitch: 90, throttle: 0, stageIndex: 0, fuel: [], shake: 0, baseY: 0, gforce: 0, calls: {}, relight: 0, stageCam: 0, reachedOrbit: false };
   let exhaust = null;
   const debris = [];            // jettisoned stages tumbling away after separation
-  const EXPLORE_UI = ["panel", "dock", "reassemble", "takeApart", "hint", "launchBtn", "helpBtn", "xrayBtn", "fxBtn", "diffBtn", "shotBtn", "shareBtn"];
+  const EXPLORE_UI = ["panel", "outline", "dock", "reassemble", "takeApart", "hint", "launchBtn", "helpBtn", "xrayBtn", "fxBtn", "diffBtn", "shotBtn", "shareBtn"];
 
   // Mission commentary card: a small dialogue box explaining what each stage is doing and
   // why the rocket behaves the way it does. Entries are PACED (each holds ~4s so it can
@@ -3771,6 +3833,52 @@
     camera.clearViewOffset();
   }
 
+  /* ============================================================
+     FLIGHT OSCILLOSCOPE — a live engine-output trace in the HUD,
+     inspired by the Aerion rotor scope. Busy amber waveform while an
+     engine burns, flat when coasting. Driven once per frame in flight.
+     ============================================================ */
+  const SCOPE_N = 110;
+  let scopeCtx = null, scopeBuf = null, scopePhase = 0;
+  function initScope() {
+    const cv = el("teleScope");
+    if (!cv || !cv.clientWidth) return false;        // not laid out yet (cockpit hidden)
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cv.width = cv.clientWidth * dpr;
+    cv.height = cv.clientHeight * dpr;
+    scopeCtx = cv.getContext("2d");
+    scopeCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    scopeBuf = new Array(SCOPE_N).fill(0);
+    return true;
+  }
+  function resetScope() { scopeCtx = null; if (scopeBuf) scopeBuf.fill(0); scopePhase = 0; }
+  function tickScope() {
+    if (!scopeCtx && !initScope()) return;
+    const cv = el("teleScope"); if (!cv) return;
+    const stage = activeRocket && activeRocket.launchStages[L.stageIndex];
+    const fuel = stage ? (L.fuel[L.stageIndex] || 0) : 0;
+    const burning = launchPhase === "flight" && L.throttle > 0.02 && fuel > 0.001;
+    const level = burning ? (0.4 + L.throttle * 0.6) : 0;   // 0 = coasting -> flat line
+    scopePhase += 0.85;
+    const osc = Math.sin(scopePhase) * 0.55 + Math.sin(scopePhase * 2.7 + 1) * 0.3;
+    const sample = level * (osc + (Math.random() - 0.5) * 0.5);  // oscillation + engine grit
+    scopeBuf.push(sample); scopeBuf.shift();
+    const ctx = scopeCtx, w = cv.clientWidth, h = cv.clientHeight, mid = h / 2;
+    ctx.clearRect(0, 0, w, h);
+    ctx.strokeStyle = "rgba(255,255,255,0.07)"; ctx.lineWidth = 1;   // center line
+    ctx.beginPath(); ctx.moveTo(0, mid); ctx.lineTo(w, mid); ctx.stroke();
+    ctx.beginPath();
+    const amp = h * 0.34;    // leave headroom so the "Engine · live" label stays clear
+    for (let i = 0; i < SCOPE_N; i++) {
+      const x = (i / (SCOPE_N - 1)) * w, y = mid - scopeBuf[i] * amp;
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.strokeStyle = "#f0a24d";
+    ctx.shadowColor = "rgba(240,162,77,0.6)"; ctx.shadowBlur = 4;
+    ctx.lineWidth = 1.6; ctx.lineJoin = "round"; ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
   function updateTelemetry() {
     const spd = Math.sqrt(L.vy * L.vy + L.vx * L.vx) * 1000;
     el("tAlt").textContent = L.alt.toFixed(1) + " km";
@@ -4313,6 +4421,11 @@
     setTimeout(() => o.classList.remove("show", "closing"), 500);
     try { localStorage.setItem("rs_intro_seen", "1"); } catch (e) {}
   }
+  // major actions (launch, tour) dismiss the first-visit welcome; safe to call when closed
+  function endIntro() {
+    const o = el("welcomeOverlay");
+    if (o && o.classList.contains("show")) closeWelcome();
+  }
   function showWelcome() {
     let seen = false;
     try { seen = localStorage.getItem("rs_intro_seen") === "1"; } catch (e) {}
@@ -4323,6 +4436,74 @@
     setTimeout(() => document.addEventListener("pointerdown", welcomeOutsideTap, true), 60);
   }
   el("welcomeGo").addEventListener("click", () => { sfx("click"); closeWelcome(); });
+
+  /* ============================================================
+     PARTS OUTLINE (left anatomy list, inspired by the Aerion cutaway).
+     Groups every part under its stage; click a row to zoom to that part
+     (internals auto-flip X-ray on), hover to highlight it on the model.
+     ============================================================ */
+  let outlineHover = null, _olActive = null;
+  function renderOutline(r) {
+    const body = el("outlineBody");
+    if (!body) return;
+    const groups = [], byStage = {};
+    (r.parts || []).forEach(p => {
+      const s = p.stage || "_";
+      if (!byStage[s]) { byStage[s] = { stage: s, items: [] }; groups.push(byStage[s]); }
+      byStage[s].items.push(p);
+    });
+    body.innerHTML = groups.map(g => {
+      // the structural piece (stage body / cone / nose) names the group and heads it
+      const main = g.items.find(p => p.id === g.stage) ||
+                   g.items.find(p => p.kind === "stage" || p.kind === "cone" || p.kind === "nose");
+      const rows = g.items.filter(p => p !== main).map(p =>
+        '<button class="ol-part' + (p.kind === "internal" ? " ol-int" : "") +
+        '" data-id="' + p.id + '"><span class="ol-dot"></span>' + p.label + "</button>"
+      ).join("");
+      const head = main
+        ? '<button class="ol-stage" data-id="' + main.id + '">' + main.label + "</button>"
+        : '<div class="ol-stage">' + (g.stage || "Parts") + "</div>";
+      return '<div class="ol-group">' + head + rows + "</div>";
+    }).join("");
+    el("outlineCount").textContent = (r.parts ? r.parts.length : 0) + " parts";
+    _olActive = null;                               // force a re-sync for the new rocket
+    el("outline").classList.remove("hide");
+  }
+  function syncOutline() {                           // reflect the focused part as the active row
+    const id = focused || null;
+    if (id === _olActive) return;
+    _olActive = id;
+    const body = el("outlineBody"); if (!body) return;
+    body.querySelectorAll(".active").forEach(b => b.classList.remove("active"));
+    if (id) { const b = body.querySelector('[data-id="' + id + '"]'); if (b) b.classList.add("active"); }
+  }
+  (function wireOutline() {
+    const body = el("outlineBody");
+    if (!body) return;
+    const hitOf = (e) => {
+      const btn = e.target.closest("[data-id]");
+      if (!btn || !current) return null;
+      return { id: btn.dataset.id, comp: current.componentMap[btn.dataset.id] };
+    };
+    body.addEventListener("click", e => {
+      const hit = hitOf(e); if (!hit || !hit.comp) return;
+      sfx("click");
+      if (hit.comp.data && hit.comp.data.kind === "internal" && !xray) setXray(true);
+      exitTour(); markToured();
+      focusPart(hit.comp);
+    });
+    body.addEventListener("pointermove", e => {
+      const hit = hitOf(e), id = hit && hit.comp ? hit.id : null;
+      if (id === outlineHover) return;
+      if (outlineHover && current && current.componentMap[outlineHover]) setHighlight(outlineHover, false);
+      outlineHover = id;
+      if (id) setHighlight(id, true);
+    });
+    body.addEventListener("pointerleave", () => {
+      if (outlineHover && current && current.componentMap[outlineHover]) setHighlight(outlineHover, false);
+      outlineHover = null;
+    });
+  })();
 
   /* ============================================================
      BROWSER BACK unwinds app state instead of leaving the site.

@@ -176,6 +176,42 @@
   .facts li::before{content:"";position:absolute;left:2px;top:13px;
     width:5px;height:5px;border-radius:50%;background:var(--accent)}
 
+  /* ---- parts outline (left anatomy list, inspired by the Aerion cutaway) ---- */
+  .outline{position:fixed;top:70px;left:18px;width:230px;z-index:9;
+    max-height:calc(100vh - 300px);display:flex;flex-direction:column;
+    background:var(--blueprint),var(--panel);border:1px solid var(--line);border-radius:8px;
+    box-shadow:0 16px 40px rgba(0,0,0,.4);
+    transition:opacity .4s var(--ease),transform .4s var(--ease)}
+  .outline.hide{opacity:0;pointer-events:none;transform:translateX(-10px)}
+  .outline-hd{flex:0 0 auto;display:flex;align-items:baseline;justify-content:space-between;gap:8px;
+    padding:13px 15px 10px;font-family:var(--display);font-weight:700;font-size:12.5px;
+    letter-spacing:.12em;text-transform:uppercase;color:var(--text);border-bottom:1px solid var(--line)}
+  .outline-hd span{font-family:var(--mono);font-weight:500;font-size:9px;letter-spacing:.08em;
+    color:var(--muted);white-space:nowrap}
+  .outline-body{flex:1 1 auto;min-height:0;overflow-y:auto;padding:8px 8px 10px;
+    scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.12) transparent;overscroll-behavior:contain}
+  .outline-body::-webkit-scrollbar{width:8px}
+  .outline-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:8px}
+  .ol-group{margin-bottom:8px}
+  .ol-group:last-child{margin-bottom:0}
+  .ol-stage{display:block;width:100%;text-align:left;font-family:var(--mono);font-size:9px;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--accent);background:none;border:none;
+    padding:7px 8px 4px;cursor:pointer;transition:color .15s}
+  .ol-stage:hover{color:#fff}
+  .ol-part{display:flex;align-items:center;gap:8px;width:100%;text-align:left;
+    font-family:var(--body);font-size:12px;line-height:1.3;color:#c9d1e0;
+    background:none;border:none;border-radius:5px;padding:5px 8px;cursor:pointer;
+    transition:background .15s,color .15s}
+  .ol-part:hover{background:rgba(255,255,255,.05);color:#fff}
+  .ol-part.active{background:var(--accent-dim);color:#fff}
+  .ol-dot{flex:0 0 auto;width:5px;height:5px;border-radius:50%;background:var(--muted);transition:all .15s}
+  .ol-part:hover .ol-dot,.ol-part.active .ol-dot{background:var(--accent)}
+  .ol-int{color:var(--muted)}
+  .ol-int .ol-dot{background:transparent;border:1px solid var(--muted)}   /* internals: hollow dot */
+  .ol-int .ol-dot::after{content:"";}
+  /* the outline needs real estate on both sides of the rocket; stand down when narrow */
+  @media (max-width:1000px){.outline{display:none}}
+
   /* ---- Rocket selector (bottom) ---- */
   .dock{position:fixed;left:0;right:0;bottom:0;z-index:9;padding:14px 16px 18px;
     background:linear-gradient(0deg,rgba(5,6,12,0.9),rgba(5,6,12,0));}
@@ -372,6 +408,13 @@
     font-size:10.5px;letter-spacing:.04em;color:var(--muted);text-transform:uppercase}
   .tele-row:last-of-type{border-bottom:none}
   .tele-row b{font-family:var(--mono);font-weight:600;font-size:13px;color:#fff;letter-spacing:-.01em}
+  /* live engine oscilloscope in the flight HUD (inspired by the Aerion rotor trace) */
+  .tele-scope-wrap{position:relative;margin:4px 0 11px;height:42px;
+    background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  .tele-scope{display:block;width:100%;height:100%}
+  .tele-scope-lbl{position:absolute;top:5px;left:8px;font-family:var(--mono);font-size:8px;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--muted);pointer-events:none;
+    text-shadow:0 0 5px rgba(8,11,20,.95),0 0 3px rgba(8,11,20,.95)}   /* stay legible over the trace */
   .fuel{height:7px;border-radius:6px;background:rgba(255,255,255,.08);margin-top:12px;overflow:hidden}
   .fuel-fill{height:100%;width:100%;border-radius:6px;
     background:var(--accent-warm);transition:width .12s linear}
@@ -476,6 +519,19 @@
     color:var(--muted);margin-bottom:7px}
   .tour-title{font-family:var(--display);font-weight:700;font-size:17px;margin-bottom:5px}
   .tour-body{font-size:13px;line-height:1.55;color:#c9d1e0;margin-bottom:13px}
+  /* draggable tour scrubber (inspired by the Aerion auto-tour timeline) */
+  .tour-scrub{margin:3px 0 13px;padding:7px 3px}
+  .tour-scrub-track{position:relative;height:6px;border-radius:4px;
+    background:rgba(255,255,255,.09);cursor:pointer;touch-action:none}
+  .tour-scrub-fill{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:4px;background:var(--accent)}
+  .tour-scrub-dot{position:absolute;top:50%;width:7px;height:7px;border-radius:50%;
+    transform:translate(-50%,-50%);background:rgba(255,255,255,.22);
+    transition:background .2s var(--ease),transform .2s var(--ease);pointer-events:none}
+  .tour-scrub-dot.done{background:rgba(111,155,208,.55)}
+  .tour-scrub-dot.active{background:#fff;transform:translate(-50%,-50%) scale(1.5);box-shadow:0 0 8px var(--accent)}
+  .tour-scrub-knob{position:absolute;top:50%;left:0;width:14px;height:14px;border-radius:50%;
+    transform:translate(-50%,-50%);background:#fff;border:2px solid var(--accent);
+    box-shadow:0 2px 8px rgba(0,0,0,.5);pointer-events:none}
   .tour-actions{display:flex;align-items:center;gap:8px}
   .tour-btn{font-family:var(--display);font-weight:600;font-size:12.5px;color:var(--text);
     background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:7px;
@@ -670,6 +726,8 @@
        over the rocket in the middle of the screen. */
     .tele{top:60px;left:10px;width:146px;padding:8px 10px 8px}
     .tele-hd{font-size:8px;margin-bottom:5px;letter-spacing:.16em}
+    .tele-scope-wrap{height:26px;margin:2px 0 7px}
+    .tele-scope-lbl{font-size:7px;top:3px;left:6px}
     .tele-row{font-size:8.5px;padding:3px 0;letter-spacing:.02em}
     .tele-row b{font-size:10px}
     .fuel{height:5px;margin-top:7px}
@@ -744,6 +802,11 @@
   </div>
 </div>
 
+<aside class="outline hide" id="outline">
+  <div class="outline-hd">Anatomy <span id="outlineCount"></span></div>
+  <div class="outline-body" id="outlineBody"></div>
+</aside>
+
 <aside class="panel" id="panel"></aside>
 
 <button class="reassemble" id="reassemble">⟳ Reassemble rocket</button>
@@ -755,6 +818,12 @@
     <div class="tour-step" id="tourStep"></div>
     <div class="tour-title" id="tourTitle"></div>
     <div class="tour-body" id="tourBody"></div>
+    <div class="tour-scrub" id="tourScrub">
+      <div class="tour-scrub-track" id="tourScrubTrack">
+        <div class="tour-scrub-fill" id="tourScrubFill"></div>
+        <div class="tour-scrub-knob" id="tourScrubKnob"></div>
+      </div>
+    </div>
     <div class="tour-actions">
       <button class="tour-btn" id="tourPrev">‹ Back</button>
       <button class="tour-btn" id="tourPlay">Pause</button>
@@ -796,6 +865,10 @@
 <div class="cockpit" id="cockpit">
   <div class="tele">
     <div class="tele-hd">Flight Telemetry</div>
+    <div class="tele-scope-wrap">
+      <canvas class="tele-scope" id="teleScope"></canvas>
+      <div class="tele-scope-lbl">Engine · live</div>
+    </div>
     <div class="tele-row"><span>Altitude</span><b id="tAlt">0 km</b></div>
     <div class="tele-row"><span>Speed</span><b id="tSpd">0 m/s</b></div>
     <div class="tele-row"><span>Vertical</span><b id="tVy">0 m/s</b></div>
@@ -873,7 +946,7 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/MaskPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
-<script src="rockets.js?v=21"></script>
-<script src="main.js?v=21"></script>
+<script src="rockets.js?v=24"></script>
+<script src="main.js?v=24"></script>
 </body>
 </html>
