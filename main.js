@@ -411,7 +411,7 @@
 
   // which broad role a part plays, used for exploding, fading and revealing
   function roleOf(kind) {
-    if (kind === "stage" || kind === "cone" || kind === "nose") return "shell";
+    if (kind === "stage" || kind === "cone" || kind === "nose" || kind === "ogive") return "shell";
     if (kind === "internal") return "internal";
     if (kind === "rollpattern" || kind === "flag" || kind === "brand" || kind === "band" || kind === "soyuzmark" || kind === "logo") return "surface";
     return "attach";
@@ -421,7 +421,7 @@
     const group = new THREE.Group();
     const componentMap = {};                  // id -> { meshes, material, data, role, stage }
     const stageRange = {};                     // shell id -> { base, top }
-    const stacked = spec.parts.filter(p => ["stage", "cone", "nose"].includes(p.kind));
+    const stacked = spec.parts.filter(p => ["stage", "cone", "nose", "ogive"].includes(p.kind));
     const baseR = stacked.length ? stacked[0].rb : 3;
 
     // While building an off-axis sub-assembly (a booster, the orbiter) this holds its
@@ -534,6 +534,16 @@
       } else if (p.kind === "nose") {
         const mesh = new THREE.Mesh(new THREE.ConeGeometry(p.rb, p.h, 48), m);
         mesh.position.y = y + p.h / 2; reg(p, mesh, m);
+      } else if (p.kind === "ogive") {
+        // tangent-ogive nose (rounded, like a real fairing) via a lathed profile:
+        // radius(yl) = sqrt(rho^2 - yl^2) - (rho - R), rho = (R^2 + h^2) / 2R
+        const R = p.rb, H = p.h, rho = (R * R + H * H) / (2 * R), N = 28, pts = [];
+        for (let i = 0; i <= N; i++) {
+          const yl = (i / N) * H;
+          pts.push(new THREE.Vector2(Math.max(0, Math.sqrt(Math.max(0, rho * rho - yl * yl)) - (rho - R)), yl));
+        }
+        const mesh = new THREE.Mesh(new THREE.LatheGeometry(pts, 48), m);
+        mesh.position.y = y; reg(p, mesh, m);
       } else {
         const mesh = new THREE.Mesh(new THREE.CylinderGeometry(p.rt, p.rb, p.h, 48, 1, false), m);
         mesh.position.y = y + p.h / 2; reg(p, mesh, m);
@@ -546,7 +556,7 @@
 
     // ---- pass 2: attachments ----
     for (const p of spec.parts) {
-      if (["stage", "cone", "nose"].includes(p.kind)) continue;
+      if (["stage", "cone", "nose", "ogive"].includes(p.kind)) continue;
       const m = mat(p.color == null ? 0xffffff : p.color, p.metal, p.rough, p.kind === "boosters");
 
       if (p.kind === "nozzles") {
@@ -4455,7 +4465,7 @@
     body.innerHTML = groups.map(g => {
       // the structural piece (stage body / cone / nose) names the group and heads it
       const main = g.items.find(p => p.id === g.stage) ||
-                   g.items.find(p => p.kind === "stage" || p.kind === "cone" || p.kind === "nose");
+                   g.items.find(p => p.kind === "stage" || p.kind === "cone" || p.kind === "nose" || p.kind === "ogive");
       const rows = g.items.filter(p => p !== main).map(p =>
         '<button class="ol-part' + (p.kind === "internal" ? " ol-int" : "") +
         '" data-id="' + p.id + '"><span class="ol-dot"></span>' + p.label + "</button>"
