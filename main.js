@@ -1706,8 +1706,8 @@
         : "Inside the stage: hover the tanks and engines · click empty space or ⟳ to step out");
       else if (focused) setHint(COARSE ? "Tap empty space to step back out" : "Click empty space or ⟳ to step back out");
       else if (appliedF < 0.06) setHint(COARSE
-        ? "Tap any part to zoom in · Take it apart for the blueprint · drag to orbit"
-        : "Click any part to zoom in · scroll to lay the rocket out flat · drag to orbit · X-ray to see inside");
+        ? "Tap a part to look closer · Take it apart for the blueprint"
+        : "Click a part to look closer · scroll to lay it flat · drag to orbit");
       else setHint(COARSE
         ? "Tap any part to zoom in · Rebuild it to stand it back up"
         : "Click any part to zoom in · scroll back to stand it up · ⟳ to rebuild");
@@ -4282,46 +4282,42 @@
   /* ============================================================
      GENTLE FIRST-VISIT INTRO (coach marks, once per session)
      ============================================================ */
-  const INTRO_STEPS = COARSE ? [
-    ["Take it apart", "Tap the Take it apart button to lay the rocket out flat into a blueprint, then tap Rebuild it to stand it back up."],
-    ["Tap a part to learn", "Tap any stage or piece to zoom in and read what it does. Hit X-ray up top to see every internal at once."],
-    ["Then fly it", "When you are ready, press LAUNCH to ride Saturn V off the pad all the way to orbit."]
+  // One welcome card = one clear first action, replacing the old 3-step coach + the
+  // redundant hint strip + help prompt all firing at once. Three things you can do.
+  const WELCOME_STEPS = COARSE ? [
+    ["Explore", "Drag to orbit the rocket, and tap Take it apart to lay it out flat into a blueprint."],
+    ["Look inside", "Tap any part to zoom in and read what it does, or hit X-ray to see every internal at once."],
+    ["Launch it", "When you are ready, press Launch to fly it off the pad all the way to orbit."]
   ] : [
-    ["Scroll to take it apart", "Scroll anywhere to lay the rocket out flat into a blueprint, then scroll back to stand it up."],
-    ["Click a part to learn", "Click any stage or piece to zoom in and read what it does. Hit X-ray up top to see every internal at once."],
-    ["Then fly it", "When you are ready, press LAUNCH to ride Saturn V off the pad all the way to orbit."]
+    ["Explore", "Drag to orbit the rocket, and scroll to lay it out flat into a blueprint."],
+    ["Look inside", "Click any part to zoom in and read what it does, or hit X-ray to see every internal at once."],
+    ["Launch it", "When you are ready, press Launch to fly it off the pad all the way to orbit."]
   ];
-  let introIdx = 0;
-  function renderIntro() {
-    el("introStep").textContent = "Getting started · " + (introIdx + 1) + " of " + INTRO_STEPS.length;
-    el("introTitle").textContent = INTRO_STEPS[introIdx][0];
-    el("introBody").textContent = INTRO_STEPS[introIdx][1];
-    el("introDots").innerHTML = INTRO_STEPS.map((_, i) =>
-      '<i class="' + (i === introIdx ? "on" : "") + '"></i>').join("");
-    el("introNext").textContent = (introIdx === INTRO_STEPS.length - 1) ? "Explore" : "Next";
+  function renderWelcome() {
+    el("welcomeSteps").innerHTML = WELCOME_STEPS.map((s, i) =>
+      '<li><span class="wk-n">' + (i + 1) + '</span><div><b>' + s[0] + '</b><em>' + s[1] + '</em></div></li>'
+    ).join("");
   }
-  function introOutsideTap(e) {
-    if (!e.target.closest(".intro-card")) endIntro();
+  function welcomeOutsideTap(e) {
+    if (!e.target.closest(".welcome-card")) closeWelcome();
   }
-  function endIntro() {
-    el("intro").classList.remove("show");
-    document.removeEventListener("pointerdown", introOutsideTap, true);
+  function closeWelcome() {
+    const o = el("welcomeOverlay");
+    o.classList.add("closing");
+    document.removeEventListener("pointerdown", welcomeOutsideTap, true);
+    setTimeout(() => o.classList.remove("show", "closing"), 500);
     try { localStorage.setItem("rs_intro_seen", "1"); } catch (e) {}
   }
-  function showIntro() {
+  function showWelcome() {
     let seen = false;
     try { seen = localStorage.getItem("rs_intro_seen") === "1"; } catch (e) {}
     if (seen) return;
-    introIdx = 0; renderIntro();
-    el("intro").classList.add("show");
-    document.addEventListener("pointerdown", introOutsideTap, true);
+    renderWelcome();
+    el("welcomeOverlay").classList.add("show");
+    // arm outside-tap-to-dismiss only after the reveal settles (no accidental close)
+    setTimeout(() => document.addEventListener("pointerdown", welcomeOutsideTap, true), 60);
   }
-  el("introNext").addEventListener("click", () => {
-    sfx("click");
-    if (introIdx < INTRO_STEPS.length - 1) { introIdx++; renderIntro(); }
-    else endIntro();
-  });
-  el("introSkip").addEventListener("click", endIntro);
+  el("welcomeGo").addEventListener("click", () => { sfx("click"); closeWelcome(); });
 
   // go
   buildDock();
@@ -4348,7 +4344,7 @@
         setTimeout(step, 90 + Math.random() * 90);
       } else {
         if (status) status.textContent = "Ready";
-        setTimeout(() => { loader.classList.add("done"); showIntro(); }, 420);
+        setTimeout(() => { loader.classList.add("done"); showWelcome(); }, 420);
       }
     }
     setTimeout(step, 220);

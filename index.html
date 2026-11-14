@@ -103,10 +103,13 @@
 
   /* ---- Info panel (right) ---- */
   .panel{position:fixed;top:70px;right:18px;width:min(380px,calc(100vw - 36px));
-    max-height:calc(100vh - 300px);overflow-y:auto;z-index:9;
+    max-height:calc(100vh - 272px);overflow-y:auto;z-index:9;
     background:var(--blueprint),var(--panel);
     border:1px solid var(--line);border-radius:8px;padding:22px 22px 24px;
     box-shadow:0 16px 40px rgba(0,0,0,.45);
+    /* fade the bottom edge so clipped content reads as "scroll for more", not broken */
+    -webkit-mask-image:linear-gradient(180deg,#000 calc(100% - 30px),transparent);
+    mask-image:linear-gradient(180deg,#000 calc(100% - 30px),transparent);
     transition:opacity .5s ease, transform .5s ease}
   .panel,.help-list{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.12) transparent;
     scroll-behavior:smooth;overscroll-behavior:contain}
@@ -194,19 +197,23 @@
   .chip.active .cm{color:var(--accent)}
   .chip.active .cm::before{content:"● viewing · ";font-size:9px;letter-spacing:.04em}
 
-  .hint{position:fixed;bottom:96px;left:50%;transform:translateX(-50%);z-index:8;
-    color:var(--muted);font-size:12px;letter-spacing:.04em;pointer-events:none;
-    opacity:.75;transition:opacity .6s}
+  /* contextual helper, parked bottom-left clear of the rocket (was centered over it) */
+  .hint{position:fixed;left:20px;bottom:176px;z-index:8;max-width:280px;
+    color:var(--muted);font-size:11.5px;line-height:1.45;letter-spacing:.02em;pointer-events:none;
+    opacity:.7;transition:opacity .5s}
   .hint.hide{opacity:0}
 
   /* ---- top-right buttons (X-ray + how-to) ---- */
   .top-btns{margin-left:auto;display:flex;gap:10px;pointer-events:auto}
   .help-btn,.xray-btn{pointer-events:auto;font-family:var(--display);
-    font-weight:600;font-size:12.5px;letter-spacing:.02em;color:var(--text);
-    background:var(--panel);border:1px solid var(--line);border-radius:6px;
+    font-weight:600;font-size:12.5px;letter-spacing:.02em;border-radius:6px;
     padding:8px 15px;cursor:pointer;
     transition:all .2s var(--ease);white-space:nowrap}
-  .help-btn:hover,.xray-btn:hover{border-color:var(--accent);color:var(--accent)}
+  /* utilities recede (ghost); X-ray stays the one solid explore tool so the eye lands on it */
+  .help-btn{color:var(--muted);background:transparent;border:1px solid transparent}
+  .help-btn:hover{color:var(--accent);background:var(--panel);border-color:var(--line)}
+  .xray-btn{color:var(--text);background:var(--panel);border:1px solid var(--line-bright)}
+  .xray-btn:hover{border-color:var(--accent);color:var(--accent)}
   .xray-btn{display:flex;align-items:center;gap:7px}
   .xray-btn .xdot{width:7px;height:7px;border-radius:50%;border:1.5px solid currentColor;
     transition:all .2s var(--ease)}
@@ -247,30 +254,45 @@
 
   .brand{cursor:default;pointer-events:auto}
 
-  /* ---- gentle first-visit intro (coach marks) ---- */
-  .intro{position:fixed;left:50%;bottom:150px;transform:translateX(-50%) translateY(14px);
-    z-index:20;width:min(400px,calc(100vw - 32px));opacity:0;pointer-events:none;
-    transition:opacity .4s var(--ease),transform .4s var(--ease)}
-  .intro.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
-  .intro-card{position:relative;background:var(--panel-solid);border:1px solid var(--line-bright);
-    border-radius:8px;padding:18px 20px 16px;
-    box-shadow:0 24px 70px rgba(0,0,0,.6),0 0 0 1px rgba(111,155,208,.08)}
-  .intro-step{font-family:var(--mono);font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;
-    color:var(--accent);margin-bottom:8px}
-  .intro-title{font-family:var(--display);font-weight:700;font-size:18px;margin-bottom:6px}
-  .intro-body{font-size:13px;line-height:1.55;color:#c9d1e0;margin-bottom:16px}
-  .intro-actions{display:flex;align-items:center;gap:10px}
-  .intro-dots{display:flex;gap:6px;margin-right:auto}
-  .intro-dots i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.2);
-    transition:all .25s var(--ease)}
-  .intro-dots i.on{background:var(--accent);box-shadow:0 0 8px var(--accent)}
-  .intro-skip{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
-    color:var(--muted);background:none;border:none;cursor:pointer;transition:color .2s}
-  .intro-skip:hover{color:var(--text)}
-  .intro-next{font-family:var(--display);font-weight:600;font-size:13px;color:#06121e;
-    background:var(--accent);border:none;border-radius:10px;padding:9px 18px;cursor:pointer;
+  /* ---- first-visit welcome (one clear entry point: Explore · Look inside · Launch) ---- */
+  .welcome-overlay{position:fixed;inset:0;z-index:35;display:none;align-items:center;
+    justify-content:center;padding:20px;opacity:0;
+    /* light scrim: the rocket stays softly visible behind the card */
+    background:radial-gradient(130% 100% at 50% 42%,rgba(5,7,14,.52),rgba(3,4,9,.8));
+    transition:opacity .5s var(--ease)}
+  .welcome-overlay.show{display:flex;opacity:1}
+  .welcome-overlay.closing{opacity:0;pointer-events:none}
+  .welcome-card{max-width:432px;width:100%;
+    background:var(--blueprint),var(--panel-solid);
+    border:1px solid var(--line-bright);border-radius:12px;padding:30px 30px 22px;
+    box-shadow:0 30px 90px rgba(0,0,0,.6);
+    transform:translateY(12px) scale(.98);transition:transform .5s var(--ease)}
+  .welcome-overlay.show .welcome-card{transform:none}
+  .welcome-kicker{font-family:var(--mono);font-size:10px;letter-spacing:.24em;text-transform:uppercase;
+    color:var(--muted);margin-bottom:4px}
+  .welcome-title{font-family:var(--display);font-weight:700;font-size:40px;letter-spacing:.015em;
+    line-height:1;margin-bottom:10px}
+  .welcome-sub{color:var(--muted);font-size:13.5px;line-height:1.5;margin-bottom:24px}
+  .welcome-steps{list-style:none;margin:0 0 24px;display:flex;flex-direction:column;gap:15px}
+  .welcome-steps li{display:flex;gap:14px;align-items:flex-start}
+  .wk-n{flex:0 0 auto;width:27px;height:27px;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;font-family:var(--mono);font-weight:600;font-size:12px;color:var(--accent);
+    background:var(--accent-dim);border:1px solid var(--accent);margin-top:1px}
+  .welcome-steps b{display:block;font-family:var(--display);font-weight:600;font-size:15px;
+    color:#fff;margin-bottom:2px}
+  .welcome-steps em{font-style:normal;font-size:12.5px;line-height:1.45;color:var(--muted)}
+  .welcome-go{width:100%;font-family:var(--display);font-weight:600;font-size:15px;color:#06121e;
+    background:var(--accent);border:none;border-radius:8px;padding:14px;cursor:pointer;
     transition:filter .2s}
-  .intro-next:hover{filter:brightness(1.08)}
+  .welcome-go:hover{filter:brightness(1.08)}
+  .welcome-foot{margin-top:13px;text-align:center;font-size:11px;letter-spacing:.01em;
+    color:var(--muted);opacity:.7}
+  .welcome-foot b{color:#c9d1e0;font-weight:600}
+  @media (max-width:560px){
+    .welcome-card{padding:24px 22px 18px}
+    .welcome-title{font-size:32px}
+    .welcome-sub{margin-bottom:18px}
+  }
 
   /* ---- launch simulator ---- */
   /* premium mission-console button: dark, glowing armed core, mono readout */
@@ -628,7 +650,7 @@
 
     /* the hint becomes a compact scrimmed pill under the topbar (it used to sit
        bare over the rocket) */
-    .hint{bottom:auto;top:94px;left:50%;width:auto;max-width:calc(100vw - 28px);
+    .hint{bottom:auto;top:94px;left:50%;transform:translateX(-50%);width:auto;max-width:calc(100vw - 28px);
       text-align:center;font-size:10.5px;line-height:1.4;padding:7px 14px;border-radius:20px;
       background:rgba(6,10,18,.62);border:1px solid var(--line);
       backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
@@ -711,16 +733,14 @@
 
 <div class="toast" id="toast"></div>
 
-<div class="intro" id="intro">
-  <div class="intro-card">
-    <div class="intro-step" id="introStep">Getting started · 1 of 3</div>
-    <div class="intro-title" id="introTitle"></div>
-    <div class="intro-body" id="introBody"></div>
-    <div class="intro-actions">
-      <div class="intro-dots" id="introDots"></div>
-      <button class="intro-skip" id="introSkip">Skip</button>
-      <button class="intro-next" id="introNext">Next</button>
-    </div>
+<div class="welcome-overlay" id="welcomeOverlay">
+  <div class="welcome-card">
+    <div class="welcome-kicker">Welcome to</div>
+    <div class="welcome-title">Apogee</div>
+    <div class="welcome-sub">Six legendary rockets, yours to take apart and fly.</div>
+    <ol class="welcome-steps" id="welcomeSteps"></ol>
+    <button class="welcome-go" id="welcomeGo">Start exploring</button>
+    <div class="welcome-foot">Need more? The <b>? How to use</b> guide is up top anytime.</div>
   </div>
 </div>
 
@@ -744,7 +764,7 @@
   </div>
 </div>
 
-<div class="hint" id="hint">Scroll to lay the rocket out flat · drag to orbit · click a stage to look inside</div>
+<div class="hint" id="hint">Click a part to look closer · scroll to lay it flat · drag to orbit</div>
 
 <div class="dock"><div class="dock-label">Fleet <span>· tap a rocket to switch</span></div><div class="dock-inner" id="dock"></div></div>
 
@@ -853,7 +873,7 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/MaskPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
-<script src="rockets.js?v=18"></script>
-<script src="main.js?v=18"></script>
+<script src="rockets.js?v=19"></script>
+<script src="main.js?v=19"></script>
 </body>
 </html>
